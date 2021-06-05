@@ -3,19 +3,15 @@ import setuptools
 with open("README.md", 'rt') as f:
     long_description = f.read()
 
-with open('LICENSE', 'rt') as f:
-    license = f.read()
-
-
 setuptools.setup(
     name="db-join",
     version="0.0.1",
     author="Frey Waid",
     author_email="logophage1@gmail.com",
-    description="NoSQL db `join`",
+    description="NoSQL db join",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    license=license,
+    license="MIT license",
     url="https://github.com/freywaid/db-join",
     packages=setuptools.find_packages(),
     classifiers=[
