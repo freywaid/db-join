@@ -67,15 +67,19 @@ class Join:
 
     Chaining:
         You chain a field pattern to a different field pattern with reference to obj
-        that was fetched:
-        eg.
-            User:owner->profile [ which will fetch user owner and then remap to join
-            owner's profile
+        that was fetched, eg. `owner->profile`. This will fetch owner and then descend to
+        join on owner's profile
 
     Replacing:
-        You can replace an obj with respect to a field by using the `!` operator
-        eg.
-            !link  will replace obj with whatever was fetched via link
+        You can replace an obj with respect to a field by using the `!` operator, eg.
+        `!link`.  This  will replace obj with whatever was fetched via link
+
+    Expanding:
+        You can recursively chain a field, eg. `+stuff->+more`.  This is equivalent to:
+            stuff->more
+            stuff->stuff->more
+            stuff->stuff->more->more
+            ...
     """
     GROUPSIZE = None
 
@@ -150,6 +154,31 @@ class Join:
         groupsize = self.groupsize
         max_accrualsize = self.max_accrualsize
 
+        # FIXME: parsing is kinda dumb; probably should haved pyparse do this work
+        def _parse(pat):
+            chain = pat.split('->')
+            parsed = []
+            for c in chain:
+                *scopes, pat = c.split(':')
+                d = {
+                    'pat': pat,
+                    'scopes': scopes,
+                    'mode': None,
+                }
+                if len(pat) > 1:
+                    if pat[0] == '!' and pat[1] != '!':
+                        d['pat'] = pat[1:]
+                        d['mode'] = 'replaces'
+                    elif pat[0] == '+' and pat[1] != '+':
+                        d['pat'] = pat[1:]
+                        d['mode'] = 'rchains'
+                parsed.append(d)
+            return parsed
+
+        # preparse all pats in a 'chain' of dicts
+        chains = (_parse(pat) for pat in pats)
+        chains = [chain for chain in chains if chain]
+
         # if chained operation is replacing, then fold value up a level in chain
         # this is fine except for very top of chain which requires replace_map`
         def _fold(obj, field, iterable):
@@ -167,11 +196,11 @@ class Join:
             if not chain:
                 return
 
-            replaces = False
-            *scopes,_pat = chain[0].split(':')
-            if _pat[0] == '!':
-                _pat = _pat[1:]
-                replaces = True
+            working = chain[0]
+            _pat = working['pat']
+            scopes = working['scopes']
+            replaces = working['mode'] == 'replaces'
+            rchains = working['mode'] == 'rchains'
 
             fields = dotted.expand(obj, _pat) if dotted.is_pattern(_pat) else (_pat,)
             for field in fields:
@@ -179,6 +208,8 @@ class Join:
                 if not is_expandable(val, scopes):
                     continue
                 if not is_key(val):
+                    if rchains:
+                        yield from _expand_chain(val, chain)
                     yield from _fold(obj, field, _expand_chain(val, chain[1:]))
                     continue
 
@@ -193,13 +224,12 @@ class Join:
 
                 # we're in cache; so stash val and see if there's more chaining work
                 setter(obj, field, _val)
+                if rchains:
+                    yield from _expand_chain(_val, chain)
                 yield from _fold(obj, field, _expand_chain(_val, chain[1:]))
 
         def _expand(obj):
-            for pat in pats:
-                if not pat:
-                    continue
-                chain = pat.split('->')
+            for chain in chains:
                 yield from _expand_chain(obj, chain)
 
         def _map(obj, accrual):
