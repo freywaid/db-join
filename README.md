@@ -69,6 +69,16 @@ at `field1`.  Note that this works with chaining as well.
 This will replace `field1` with whatever was found in `symlink`.
 
 
+## Recursive chaining
+
+Similar to replacing, sometimes you want to recursively expand objects that are linked
+via the same field.  The `+` operator lets you do this:
+
+    >>> joiner(client, iterable, '+field')
+
+This will fetch the object at `field`. If that object also has `field`, then it will
+fetch the object at that object's `field` and so on until there's no more work.
+
 ## Internals
 
 A `Join` class has a number of abstractions to help you out.  The two most important are
