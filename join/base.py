@@ -16,6 +16,7 @@ MARKER = object()
 class AccrualItem:
     __slots__ = ('obj', 'key', 'field', 'replaces')
     def __init__(self, obj, key, field, replaces=False):
+        assert key is not None, 'Accrual key is invalid'
         self.obj = obj
         self.key = key
         self.field = field
@@ -128,6 +129,15 @@ class Join:
         """
         raise NotImplementedError
 
+    def _obj2key(self, obj):
+        """
+        Internal call to ensure we have a 'key' even if obj doesn't explicitly have one
+        """
+        key = self.obj2key(obj)
+        if key is not None:
+            return key
+        return id(obj)
+
     def is_expandable(self, obj, scopes):
         """
         An expandable obj must be a key OR a db entity (with a key)
@@ -219,7 +229,7 @@ class Join:
                 if _val is None:                # negative cache hit
                     continue
                 if _val is MARKER:              # not in cache?
-                    yield AccrualItem(obj, self.obj2key(obj), field, replaces), val
+                    yield AccrualItem(obj, self._obj2key(obj), field, replaces), val
                     continue
 
                 # we're in cache; so stash val and see if there's more chaining work
@@ -264,14 +274,14 @@ class Join:
             return count
 
         def _replace(obj, replace_map):
-            key = self.obj2key(obj)
+            key = self._obj2key(obj)
             if key not in replace_map:
                 return obj
             seen = set()
             while key not in seen:
                 seen.add(key)
                 obj = replace_map.get(key, obj)
-                key = self.obj2key(obj)
+                key = self._obj2key(obj)
             for key in seen:
                 replace_map[key] = obj
             return obj

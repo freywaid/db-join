@@ -93,7 +93,7 @@ class MemDB(base.Join):
     def is_key(self, obj):
         return isinstance(obj, Key)
     def obj2key(self, obj):
-        return obj.key
+        return getattr(obj, 'key', None)
     def is_expandable(self, obj, scopes):
         key = getattr(obj, 'key', obj)
         if not self.is_key(key):
@@ -146,3 +146,15 @@ def test_join():
     assert found['ref'].key == Key('Test', 2)
     assert found['ref']['ref'].key == Key('Test', 3)
     assert found['ref']['ref']['foo'] == 'leaf'
+
+
+def test_no_key():
+    client = Client()
+
+    obj1 = Entity(Key('Test', 1))
+    client.put(obj1)
+
+    # test no-keyed objs
+    found = list(join(client, [{'ref': Key('Test', 1)}], 'ref'))
+    assert found[0]['ref'] == obj1
+

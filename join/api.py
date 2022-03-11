@@ -16,7 +16,7 @@ class DatastoreJoin(base.Join):
         return isinstance(obj, datastore.Key)
 
     def obj2key(self, obj):
-        return obj.key
+        return getattr(obj, 'key', None)
 
     def is_expandable(self, obj, scopes):
         key = getattr(obj, 'key', obj)
