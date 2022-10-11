@@ -304,7 +304,8 @@ class Join:
             _groupsize = min(limit or groupsize, groupsize)
 
             # don't drain iterable if we've reached our limit
-            if limit and len(q) < limit:
+            obj = MARKER
+            if limit is None or limit > 0:
                 obj = next(iterable, MARKER)
                 if obj is not MARKER:
                     obj = _replace(obj, replace_map)
