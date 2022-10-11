@@ -301,16 +301,18 @@ class Join:
         accrued = 0
         replace_map = {}
         while True:
-            _groupsize =  min(limit or groupsize, groupsize)
+            _groupsize = min(limit or groupsize, groupsize)
 
-            obj = next(iterable, MARKER)
-            if obj is not MARKER:
-                obj = _replace(obj, replace_map)
-                _, count = _map(obj, accrual)
-                accrued += count
-                q.append(obj)
-            elif not q:
-                return
+            # don't drain iterable if we've reached our limit
+            if limit and len(q) < limit:
+                obj = next(iterable, MARKER)
+                if obj is not MARKER:
+                    obj = _replace(obj, replace_map)
+                    _, count = _map(obj, accrual)
+                    accrued += count
+                    q.append(obj)
+                elif not q:
+                    return
 
             # force early reduce if accrual is too large or reached end of iterable
             if obj is MARKER or len(accrual) >= _groupsize or accrued >= max_accrualsize:
