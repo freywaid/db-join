@@ -161,7 +161,7 @@ class Join:
         get_multi = self.get_multi
         is_key = self.is_key
         is_expandable = self.is_expandable
-        groupsize = self.groupsize
+        groupsize = kwargs.pop('groupsize', None) or self.groupsize
         max_accrualsize = self.max_accrualsize
 
         # FIXME: parsing is kinda dumb; probably should haved pyparse do this work
