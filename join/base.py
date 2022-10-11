@@ -255,10 +255,9 @@ class Join:
                 return False, 0
             return True, count
 
-        def _reduce(accrual, replace_map):
+        def _reduce(accrual, replace_map, groupsize):
             count = 0
-            _groupsize =  min(limit or groupsize, groupsize)
-            keys = list(itertools.islice(accrual, _groupsize))
+            keys = list(itertools.islice(accrual, groupsize))
             found = {o.key:o for o in get_multi(client, keys, **kwargs)}
             cache.update(found)
             cache.update((k,None) for k in keys - found.keys())
@@ -315,7 +314,7 @@ class Join:
 
             # force early reduce if accrual is too large or reached end of iterable
             if obj is MARKER or len(accrual) >= _groupsize or accrued >= max_accrualsize:
-                accrued -= _reduce(accrual, replace_map)
+                accrued -= _reduce(accrual, replace_map, _groupsize)
             else:
                 continue
 
@@ -333,10 +332,11 @@ class Join:
                     if _filter and not _filter(obj):
                         continue
                     yield obj
-                    if limit is not None:
-                        limit -= 1
-                        if limit <= 0:
-                            return
+                    if limit is None:
+                        continue
+                    limit -= 1
+                    if limit <= 0:
+                        return
                 elif len(accrual) >= _groupsize or accrued >= max_accrualsize:
                     break
 
