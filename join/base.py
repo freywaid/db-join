@@ -160,7 +160,9 @@ class Join:
         limit = kwargs.pop('limit', None)
         _filter = kwargs.pop('filter', None)
 
-        if isinstance(pats, str):
+        if not pats:
+            pats = ()
+        elif isinstance(pats, str):
             pats = (pats,)
 
         # FIXME: parsing is kinda dumb; probably should haved pyparse do this work
