@@ -168,6 +168,18 @@ def test_limit():
     objs = [Entity(Key('Test', 1)), Entity(Key('Test', 2)), Entity(Key('Test', 3))]
     client.put_multi(objs)
 
-    objs = join(client, objs, ('ignore',), limit=2)
+    objs = join(client, objs, (), limit=2)
     assert len(list(objs)) == 2
 
+
+def test_filter():
+    client = Client()
+
+    objs = [Entity(Key('Test', 1)), Entity(Key('Test', 2)), Entity(Key('Test', 3))]
+    client.put_multi(objs)
+
+    def _filter(obj):
+        return obj.key != Key('Test', 2)
+
+    objs = join(client, objs, (), filter=_filter)
+    assert len(list(objs)) == 2

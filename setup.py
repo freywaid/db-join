@@ -5,7 +5,7 @@ with open("README.md", 'rt') as f:
 
 setuptools.setup(
     name="db-join",
-    version="0.1.3",
+    version="0.1.4",
     author="Frey Waid",
     author_email="logophage1@gmail.com",
     description="NoSQL db join",

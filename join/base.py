@@ -158,12 +158,7 @@ class Join:
         max_accrualsize = self.max_accrualsize
         groupsize = kwargs.pop('groupsize', None) or self.groupsize
         limit = kwargs.pop('limit', None)
-
-        if not pats:
-            if limit:
-                iterable = (o for idx, o in enumerate(iterable) if idx < limit)
-            yield from iterable
-            return
+        _filter = kwargs.pop('filter', None)
 
         if isinstance(pats, str):
             pats = (pats,)
@@ -332,8 +327,10 @@ class Join:
                 accrued += count
                 more = more or mapped
                 if not more:
-                    yield obj
                     consumed += 1
+                    if _filter and not _filter(obj):
+                        continue
+                    yield obj
                     if limit is not None:
                         limit -= 1
                         if limit <= 0:
