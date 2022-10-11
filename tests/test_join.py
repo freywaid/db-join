@@ -86,6 +86,9 @@ class Client:
     def put(self, obj):
         key = obj.key.precommit()
         return db.put(key.path, obj)
+    def put_multi(self, objs):
+        for obj in objs:
+            self.put(obj)
 
 
 class MemDB(base.Join):
@@ -157,4 +160,14 @@ def test_no_key():
     # test no-keyed objs
     found = list(join(client, [{'ref': Key('Test', 1)}], 'ref'))
     assert found[0]['ref'] == obj1
+
+
+def test_limit():
+    client = Client()
+
+    objs = [Entity(Key('Test', 1)), Entity(Key('Test', 2)), Entity(Key('Test', 3))]
+    client.put_multi(objs)
+
+    objs = join(client, objs, ('ignore',), limit=2)
+    assert len(list(objs)) == 2
 

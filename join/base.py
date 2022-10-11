@@ -149,20 +149,24 @@ class Join:
         raise NotImplementedError
 
     def __call__(self, client, iterable, pats, *, cache=None, **kwargs):
-        if not pats:
-            yield from iterable
-            return
-        if isinstance(pats, str):
-            pats = (pats,)
-
         cache = cache or self.cache
         getter = self.getter
         setter = self.setter
         get_multi = self.get_multi
         is_key = self.is_key
         is_expandable = self.is_expandable
-        groupsize = kwargs.pop('groupsize', None) or self.groupsize
         max_accrualsize = self.max_accrualsize
+        groupsize = kwargs.pop('groupsize', None) or self.groupsize
+        limit = kwargs.pop('limit', None)
+
+        if not pats:
+            if limit:
+                iterable = (o for idx, o in enumerate(iterable) if idx < limit)
+            yield from iterable
+            return
+
+        if isinstance(pats, str):
+            pats = (pats,)
 
         # FIXME: parsing is kinda dumb; probably should haved pyparse do this work
         def _parse(pat):
@@ -256,7 +260,8 @@ class Join:
 
         def _reduce(accrual, replace_map):
             count = 0
-            keys = list(itertools.islice(accrual, self.groupsize))
+            _groupsize =  min(limit or groupsize, groupsize)
+            keys = list(itertools.islice(accrual, _groupsize))
             found = {o.key:o for o in get_multi(client, keys, **kwargs)}
             cache.update(found)
             cache.update((k,None) for k in keys - found.keys())
@@ -300,6 +305,8 @@ class Join:
         accrued = 0
         replace_map = {}
         while True:
+            _groupsize =  min(limit or groupsize, groupsize)
+
             obj = next(iterable, MARKER)
             if obj is not MARKER:
                 obj = _replace(obj, replace_map)
@@ -310,7 +317,7 @@ class Join:
                 return
 
             # force early reduce if accrual is too large or reached end of iterable
-            if obj is MARKER or len(accrual) >= groupsize or accrued >= max_accrualsize:
+            if obj is MARKER or len(accrual) >= _groupsize or accrued >= max_accrualsize:
                 accrued -= _reduce(accrual, replace_map)
             else:
                 continue
@@ -327,7 +334,11 @@ class Join:
                 if not more:
                     yield obj
                     consumed += 1
-                elif len(accrual) >= groupsize or accrued >= max_accrualsize:
+                    if limit is not None:
+                        limit -= 1
+                        if limit <= 0:
+                            return
+                elif len(accrual) >= _groupsize or accrued >= max_accrualsize:
                     break
 
             # clear stuff that was yielded
