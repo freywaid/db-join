@@ -303,17 +303,19 @@ class Join:
         while True:
             _groupsize = min(limit or groupsize, groupsize)
 
-            # don't drain iterable if we've reached our limit
+            # don't drain iterable if we've reached (or could reach) our limit
             obj = MARKER
-            if limit is None or limit > 0:
+            if limit is None or limit - len(q) > 0:
                 obj = next(iterable, MARKER)
                 if obj is not MARKER:
                     obj = _replace(obj, replace_map)
                     _, count = _map(obj, accrual)
                     accrued += count
                     q.append(obj)
-                elif not q:
-                    return
+
+            # ready to exit?
+            if obj is MARKER and not q:
+                return
 
             # force early reduce if accrual is too large or reached end of iterable
             if obj is MARKER or len(accrual) >= _groupsize or accrued >= max_accrualsize:
